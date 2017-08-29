@@ -1574,6 +1574,7 @@ convert_raster(int idx, RTLOADERCFG *config, RASTERINFO *info, STRINGBUFFER *til
 	int tilesize = 0;
 
 	rt_raster rast = NULL;
+	int empty = 0;
 	int numbands = 0;
 	rt_band band = NULL;
 	char *hex;
@@ -1952,12 +1953,13 @@ convert_raster(int idx, RTLOADERCFG *config, RASTERINFO *info, STRINGBUFFER *til
 				/* set srid if provided */
 				rt_raster_set_srid(rast, info->srid);
 
+				empty = 0;
 				/* inspect each band of raster where band is NODATA */
 				numbands = rt_raster_get_num_bands(rast);
 				for (i = 0; i < numbands; i++) {
 					band = rt_raster_get_band(rast, i);
 					if (band != NULL && !config->skip_nodataval_check)
-						rt_band_check_is_nodata(band);
+						empty = rt_band_check_is_nodata(band);
 				}
 
 				/* convert rt_raster to hexwkb */
@@ -1971,7 +1973,11 @@ convert_raster(int idx, RTLOADERCFG *config, RASTERINFO *info, STRINGBUFFER *til
 				}
 
 				/* add hexwkb to tileset */
-				append_stringbuffer(tileset, hex);
+				if (empty == 0) {
+					append_stringbuffer(tileset, hex);
+				} else {
+					rtdealloc(hex);
+				}
 
 				GDALClose(hdsDst);
 
